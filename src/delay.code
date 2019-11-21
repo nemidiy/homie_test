@@ -1,0 +1,31 @@
+#include <Homie.h>
+
+HomieNode sensorNode("sensor", "Sensor", "sensor");
+
+unsigned long lastSent = 0;
+
+void loopHandler() {
+  unsigned long m = millis();
+  if ( m - lastSent >= 10 * 1000UL || lastSent == 0) {
+    Homie.getLogger() << "Fake value: " << m << endl;
+    sensorNode.setProperty("value").send(String(m));
+    lastSent = millis();
+  }
+}
+
+void setup() {
+
+  Serial.begin(115200);
+  Serial << endl << endl;
+
+  Homie_setFirmware("test", "1.0.0");
+  Homie.setLoopFunction(loopHandler);
+
+  sensorNode.advertise("value").setName("Value").setDatatype("double");
+
+  Homie.setup();
+}
+
+void loop(){
+    Homie.loop();
+}

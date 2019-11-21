@@ -1,0 +1,57 @@
+#include <Homie.h>
+#include <Wire.h>
+
+HomieNode sensorNode("sensor", "Sensor", "sensor");
+
+void loopHandler() {
+    Wire.beginTransmission(104);
+    Wire.write("R\0");
+    Wire.endTransmission();
+    delay(500);
+    Wire.requestFrom(104, 20, 1);
+    //the first byte is the response code, we read this separately.
+    byte code = Wire.read();
+    char buffer[20];
+    if(code == 1){
+      Serial.println("Success");
+      byte i = 0;
+      while (Wire.available()) {
+        buffer[i] = Wire.read();
+        if (buffer[i] == 0){
+          Wire.endTransmission();
+          break;
+        }
+        ++i;
+      }
+      Serial.print("Response : ");
+      Serial.println(buffer);
+      sensorNode.setProperty("value").send(String(buffer));
+    }else if (code == 2){
+      Serial.println("Failure");
+    }else if (code == 254){
+      Serial.println("Not finished");
+    }else if (code == 255){
+      Serial.println("No data");
+    }
+}
+
+void setup() {
+
+  Serial.begin(115200);
+  Serial << endl << endl;
+
+  Wire.begin();
+
+  Homie_setFirmware("i2c-test", "1.0.0");
+  Homie.setLoopFunction(loopHandler);
+
+  sensorNode.advertise("value").setName("Value").setDatatype("double");
+
+  Homie.setup();
+}
+
+void loop(){
+    Homie.loop();
+    // without this delay it will not connect to the MQTT broker :S
+    delay(100);
+}
